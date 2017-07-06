@@ -8,16 +8,29 @@ import java.util.Vector;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
- * 写时复制容器 copy on write
- * 多线程环境下，写时效率低，读时效率高
- * 适合写少读多的环境
+ * 关于队列的使用
+ * 1.不加锁无多线程
+ *  - ArrayList
+ *  - LinkedList
+ * 2.要加锁(并发低)
+ *  - Vector
+ *  - Collections.synchronizedXXX
+ * 3.并发要求高
+ *  - CopyOnWriteArrayList适合写少读多的场景，事件监听器可以应用
+ *  - ConcurrentLinkedQueue
+ *    阻塞式队列
+ *  - LinkedBlockingQueue无界队列
+ *  - ArrayBlockingQueue有界队列
+ *  - TransferQueue可直接将生产的任务传递给消费者线程
+ *  - SynchronousQueue零容量的TransferQueue
+ *  - DelayQueue执行定时任务
  * 
- * 事件监听器可以应用
+ * 写时复制容器在多线程环境下，写时效率低，读时效率高
  * 
  * @author yang
  *
  */
-public class T25CopyOnWriteList {
+public class T25_2CopyOnWriteList {
 	public static void main(String[] args) {
 		List<String> arrayList = new ArrayList<>(); //会出现并发问题
 		runAndComputeTime(arrayList);

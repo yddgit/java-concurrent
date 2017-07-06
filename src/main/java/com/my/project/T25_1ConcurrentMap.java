@@ -17,7 +17,7 @@ import java.util.concurrent.CountDownLatch;
  * http://www.educity.cn/java/498061.html
  * 
  * 关于Map/Set的使用
- * 1.不加锁
+ * 1.不加锁无多线程
  *  - HashMap
  *  - TreeMap
  *  - LinkedHashMap
@@ -32,7 +32,7 @@ import java.util.concurrent.CountDownLatch;
  * @author yang
  *
  */
-public class T25ConcurrentMap {
+public class T25_1ConcurrentMap {
 	public static void main(String[] args) {
 		//默认同步，但会锁定整个对象，效率较低
 		Map<String, String> hashTable = new Hashtable<>();

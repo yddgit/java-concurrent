@@ -3,7 +3,7 @@ package com.my.project;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
-public class T25ConcurrentQueue {
+public class T25_4ConcurrentQueue {
 	public static void main(String[] args) {
 		Queue<String> strs = new ConcurrentLinkedQueue<>();
 

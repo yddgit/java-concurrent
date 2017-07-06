@@ -6,7 +6,12 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Random;
 
-public class T25SynchronizedList {
+/**
+ * 使用Collections.synchronizedXXX给无锁容器加锁
+ * @author yang
+ *
+ */
+public class T25_3SynchronizedList {
 	public static void main(String[] args) {
 		List<String> arrayList = new ArrayList<>();
 		//给List加锁
