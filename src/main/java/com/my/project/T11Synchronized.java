@@ -26,6 +26,7 @@ public class T11Synchronized {
 				e.printStackTrace();
 			}
 			if(count == 5) {
+				@SuppressWarnings("unused")
 				int i = 1/0; //此处抛出异常，锁将被释放，要想不被释放，可以在这里进行catch，然后让循环继续
 			}
 		}
