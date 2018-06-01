@@ -7,7 +7,7 @@ package com.my.project.java;
  * 2. 允许覆盖Object中的方法
  * 3. 允许定义默认方法
  * 4. 允许定义静态方法
- * @author by84
+ * @author yang
  */
 @FunctionalInterface
 public interface GreetingService {
