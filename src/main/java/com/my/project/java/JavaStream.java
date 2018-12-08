@@ -75,4 +75,17 @@ import java.util.stream.IntStream;
  */
 public class JavaStream {
 
+    /**
+     * 分解质因数
+     * @param n 待分解的数
+     * @return 因子列表
+     */
+    public static IntStream factorize(int n) {
+        return IntStream.range(2, n)
+                .filter(x -> n % x == 0)
+                .mapToObj(x -> IntStream.concat(IntStream.of(x), factorize(n / x)))
+                .findFirst()
+                .orElse(IntStream.of(n));
+    }
+
 }
