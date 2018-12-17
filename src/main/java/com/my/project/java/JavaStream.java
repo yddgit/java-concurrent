@@ -46,10 +46,18 @@ import java.util.stream.IntStream;
  *
  * - Intermediate: 一个流以后面跟随零个或多个intermediate操作，目的是打开流，做某种程度的数据映射/过滤，然后返回一个新的流，交给下一个操作使用。
  * 这类操作都是惰性化的(lazy)，仅仅调用到这类方法，并没有真正开始流的遍历。
+ *
+ *   map(mapToInt, flatMap), filter, distinct, sorted, peek, limit, skip, parallel, sequential, unordered
+ *
  * - Terminal: 一个流只能有一个Terminal操作，当这个操作执行后，流就被使用"光"了。
  * 这必定是流的最后一个操作，Terminal操作的执行，才会真正开始流的遍历并生成一个结果或者side effect
+ *
+ *   forEach, forEachOrdered, toArray, reduce, collect, min, max, count, anyMatch, allMatch, noneMatch, findFirst, findAny, iterator
+ *
  * - Short-circuiting: 对于一个intermediate操作，如果它接受的是一个无限大的Stream，但返回一个有限的新Stream，
  * 或对于一个terminal操作，如果它接受的是一个无限大的Stream，但能在有限的时间计算出结果。
+ *
+ *   anyMatch, allMatch, noneMatch, findFirst, findAny, limit
  *
  * 在对一个Stream进行多次intermediate操作时，所有操作都是lazy的，多个转换操作只会在Terminal操作的时候融合起来，一次循环完成。
  * 可以简单理解：Stream里有个操作函数的集合，每次转换操作就是把转换函数放入这个集合中，在Terminal操作的时候循环Stream对应的集合，然后对每个元素执行所有的函数。
@@ -86,6 +94,35 @@ public class JavaStream {
                 .mapToObj(x -> IntStream.concat(IntStream.of(x), factorize(n / x)))
                 .findFirst()
                 .orElse(IntStream.of(n));
+    }
+
+    public static class Person {
+        public enum Sex {
+            MALE, FEMALE
+        }
+
+        public Person() { }
+
+        public Person(String name, Sex gender) {
+            this.name = name;
+            this.gender = gender;
+        }
+
+        private String name;
+        private Sex gender;
+
+        public String getName() {
+            return name;
+        }
+        public void setName(String name) {
+            this.name = name;
+        }
+        public Sex getGender() {
+            return gender;
+        }
+        public void setGender(Sex gender) {
+            this.gender = gender;
+        }
     }
 
 }
