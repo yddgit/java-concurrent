@@ -1,5 +1,7 @@
 package com.my.project.java;
 
+import java.util.Random;
+import java.util.function.Supplier;
 import java.util.stream.IntStream;
 
 /**
@@ -103,14 +105,24 @@ public class JavaStream {
 
         public Person() { }
 
-        public Person(String name, Sex gender) {
+        public Person(int no, String name, Sex gender, int age) {
+            this.no = no;
             this.name = name;
             this.gender = gender;
+            this.age = age;
         }
 
+        private int no;
         private String name;
         private Sex gender;
+        private int age;
 
+        public int getNo() {
+            return no;
+        }
+        public void setNo(int no) {
+            this.no = no;
+        }
         public String getName() {
             return name;
         }
@@ -123,6 +135,31 @@ public class JavaStream {
         public void setGender(Sex gender) {
             this.gender = gender;
         }
+        public int getAge() {
+            return age;
+        }
+        public void setAge(int age) {
+            this.age = age;
+        }
+
+        @Override
+        public String toString() {
+            return "Person{" +
+                    "no=" + no +
+                    ", name='" + name + '\'' +
+                    ", gender=" + gender +
+                    ", age=" + age +
+                    '}';
+        }
     }
 
+    public static class PersonSupplier implements Supplier<Person> {
+        private int index = 0;
+        private Random random = new Random();
+
+        @Override
+        public Person get() {
+            return new Person(++index, "TestUser" + index, Person.Sex.MALE, random.nextInt(100));
+        }
+    }
 }

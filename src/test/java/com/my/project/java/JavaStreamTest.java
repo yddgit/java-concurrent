@@ -7,6 +7,7 @@ import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
 import java.io.InputStreamReader;
 import java.util.*;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
@@ -16,6 +17,7 @@ import org.junit.Test;
 
 import com.my.project.java.JavaStream.Person;
 import com.my.project.java.JavaStream.Person.Sex;
+import com.my.project.java.JavaStream.PersonSupplier;
 import org.springframework.boot.test.rule.OutputCapture;
 
 /**
@@ -166,8 +168,8 @@ public class JavaStreamTest {
     @Test
     public void forEach() {
         List<Person> list = new ArrayList<>();
-        list.add(new Person("Jerry", Sex.MALE));
-        list.add(new Person("Merry", Sex.FEMALE));
+        list.add(new Person(1, "Jerry", Sex.MALE, 20));
+        list.add(new Person(2, "Merry", Sex.FEMALE, 20));
         // java 8
         list.stream()
             .filter(p -> p.getGender() == Sex.MALE)
@@ -268,6 +270,153 @@ public class JavaStreamTest {
             .filter(x -> x.compareTo("Z") > 0)
             .reduce("", String::concat);
         assertEquals("ace", concat);
+    }
+
+    /**
+     * limit：返回Stream的前面n个元素
+     * skip：扔掉前n个元素
+     */
+    @Test
+    public void limitAndSkip() {
+        List<Person> persons = new ArrayList();
+        for(int i=1; i<10000; i++) {
+            Person person = new Person(i, "name" + i, Sex.MALE, 20);
+            persons.add(person);
+        }
+        List<String> personList = persons.stream().map(Person::getName)
+            .limit(10).skip(3).collect(Collectors.toList());
+        System.out.println(personList);
+        assertEquals(7, personList.size());
+    }
+
+    /**
+     * sort对limit的影响：将limit/skip放到Stream的sort操作之后，无法达到short-circuiting的目的。
+     * 这与sort这个intermediate操作有关：此时系统并不知道Stream排序后的次序如何，所以sorted中的操作看上去
+     * 就像完全没有被limit或skip一样
+     *
+     * 对一个parallel的Stream管道来说，如果其元素是有序的，那么limit操作的成本会比较大，
+     * 因为它的返回对象必须是前n个也有一样次序的元素。取而代之的策略是取消元素间的次序，或者不用parallel Stream
+     */
+    @Test
+    public void limitAndSort() {
+        List<Person> persons = new ArrayList<>();
+        for(int i=5; i>0; i--) {
+            Person person = new Person(i, "name" + i, Sex.FEMALE, 20);
+            persons.add(person);
+        }
+        List<Person> personList = persons.stream().sorted(Comparator.comparing(Person::getName))
+            .limit(2).collect(Collectors.toList());
+        System.out.println(personList);
+        assertEquals(2, personList.size());
+    }
+
+    /**
+     * sort：对Stream进行排序，可以通过map、filter、limit、skip甚至distinct来减少元素数量后再排序
+     * 但是：这种优化是有局限性的，即不要求排序后再取值
+     */
+    @Test
+    public void sort() {
+        List<Person> persons = new ArrayList<>();
+        for(int i=1; i<=5; i++) {
+            Person person = new Person(i, "name" + i, Sex.MALE, 20);
+            persons.add(person);
+        }
+        List<Person> personList = persons.stream().limit(2).sorted(Comparator.comparing(Person::getName))
+            .collect(Collectors.toList());
+        System.out.println(personList);
+        assertEquals(2, personList.size());
+    }
+
+    /**
+     * max
+     */
+    @Test
+    public void max() {
+        String lines = "References view - Find All References view includes history of recent searches.\n" +
+            "Snippet comment variables - Snippet variables insert correct comment per language.\n" +
+            "JS/TS callback display - Now you can see the context of anonymous callbacks.\n";
+        ByteArrayInputStream inputStream = new ByteArrayInputStream(lines.getBytes());
+        BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));
+        int longest = reader.lines().mapToInt(String::length).max().getAsInt();
+        assertEquals(82, longest);
+    }
+
+    /**
+     * min
+     */
+    @Test
+    public void min() {
+        String lines = "JSDoc Markdown highlighting - Including syntax highlighting for Markdown code blocks in JSDoc.\n" +
+            "Simplified debug configuration - Better defaults and Quick Pick UI for initial launch configuration.\n" +
+            "Run tasks on folder open - Configure tasks to run when you first open a project folder.\n";
+        ByteArrayInputStream inputStream = new ByteArrayInputStream(lines.getBytes());
+        BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));
+        int shortest = reader.lines().mapToInt(String::length).min().getAsInt();
+        assertEquals(87, shortest);
+    }
+
+    /**
+     * distinct
+     */
+    @Test
+    public void distinct() {
+        String lines = "Last month, we added support for multiline search.\n" +
+            "This month we improved the search UX to make it easier to use.\n";
+        ByteArrayInputStream inputStream = new ByteArrayInputStream(lines.getBytes());
+        BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));
+        List<String> words = reader.lines().flatMap(line -> Stream.of(line.split("[\\s|\\-|\\.|\\,]")))
+            .filter(word -> word.length() > 0)
+            .map(String::toLowerCase)
+            .distinct().sorted().collect(Collectors.toList());
+        System.out.println(words);
+        assertEquals(17, words.size());
+    }
+
+    /**
+     * match
+     * allMatch：Stream中全部元素符合传入的predicate返回true
+     * anyMatch：Stream中只要有一个元素符合传入的predicate返回true
+     * noneMatch：Stream中没有一个元素符合传入的predicate返回true
+     */
+    @Test
+    public void match() {
+        List<Person> persons = new ArrayList<>();
+        persons.add(new Person(1, "name1", Sex.MALE, 10));
+        persons.add(new Person(2, "name2", Sex.FEMALE, 21));
+        persons.add(new Person(3, "name3", Sex.MALE, 34));
+        persons.add(new Person(4, "name4", Sex.FEMALE, 6));
+        persons.add(new Person(5, "name5", Sex.MALE, 55));
+        boolean isAllAdult = persons.stream().allMatch(p -> p.getAge() > 18);
+        assertFalse(isAllAdult);
+        boolean isThereAnyChild = persons.stream().anyMatch(p -> p.getAge() < 12);
+        assertTrue(isThereAnyChild);
+    }
+
+    /**
+     * Stream.generate
+     * 通过实现Supplier接口，可以控制流的生成，常用于随机数、常量的Stream
+     * 默认是串行但无序的，由于是无限的，在管道中必须利用limit之类的操作限制Stream大小
+     */
+    @Test
+    public void generate1() {
+        Random seed = new Random();
+        Supplier<Integer> random = seed::nextInt;
+        Stream.generate(random).limit(10).forEach(System.out::println);
+        // OR
+        IntStream.generate(() -> (int)(System.nanoTime() % 999))
+            .limit(10).forEach(System.out::println);
+        assertEquals(20, capture.toString().split("\n").length);
+    }
+
+    /**
+     * Stream.generate
+     * 也可以自己实现Supplier，如在构造海量测试数据时用某种自动的规则给每一个变量赋值，或者依据公式计算Stream的每个元素值
+     */
+    @Test
+    public void generate2() {
+        Stream.generate(new PersonSupplier()).limit(10)
+            .forEach(System.out::println);
+        assertEquals(10, capture.toString().split("\n").length);
     }
 
 }
