@@ -61,7 +61,7 @@ public class JavaStreamTest {
     public void create1() {
         String[] expected = new String[]{"a", "b", "c"};
         // Individuals values
-        Stream stream = Stream.of("a", "b", "c");
+        Stream<String> stream = Stream.of("a", "b", "c");
         assertArrayEquals(expected, stream.toArray());
         // Arrays
         String[] strArrays = new String[]{"a", "b", "c"};
@@ -278,7 +278,7 @@ public class JavaStreamTest {
      */
     @Test
     public void limitAndSkip() {
-        List<Person> persons = new ArrayList();
+        List<Person> persons = new ArrayList<Person>();
         for(int i=1; i<10000; i++) {
             Person person = new Person(i, "name" + i, Sex.MALE, 20);
             persons.add(person);
@@ -417,6 +417,47 @@ public class JavaStreamTest {
         Stream.generate(new PersonSupplier()).limit(10)
             .forEach(System.out::println);
         assertEquals(10, capture.toString().split("\n").length);
+    }
+
+    /**
+     * Stream.iterate
+     * iterate和reduce操作很像，接受一个种子值，和一个UnaryOperator（例如f）。
+     * 然后种子值成为Stream的第一个元素，f(seed)为第二个，f(f(seed))为第三个，以此类推。
+     * 与Stream.generate类似，在iterate的时候管道必须有limit这样的操作来限制Stream大小
+     */
+    @Test
+    public void iterate() {
+        Stream.iterate(0, n -> n + 3).limit(10).forEach(x -> System.out.print(x + " "));
+    }
+
+    /**
+     * groupingBy/partitioningBy
+     * java.utils.stream.Collectors类主要作用是辅助进行各类有用的reduction操作。如将Stream元素进行归组
+     */
+    @Test
+    public void grouping() {
+        Map<Integer, List<Person>> personGroups = Stream.generate(new PersonSupplier())
+            .limit(100).collect(Collectors.groupingBy(Person::getAge));
+        Iterator<Map.Entry<Integer, List<Person>>> it = personGroups.entrySet().iterator();
+        while(it.hasNext()) {
+            Map.Entry<Integer, List<Person>> persons = it.next();
+            System.out.println("Age " + persons.getKey() + "=" + persons.getValue().size());
+        }
+        assertTrue(personGroups.size() < 100);
+        assertEquals(100, personGroups.values().stream().map(List::size).reduce(Integer::sum).get().intValue());
+    }
+
+    /**
+     * partitioningBy
+     * partitioningBy其实是一种特殊的groupingBy，它依照条件测试的是否两种结果来构造返回的数据结构
+     */
+    @Test
+    public void partitioningBy() {
+        Map<Boolean, List<Person>> children = Stream.generate(new PersonSupplier())
+            .limit(100).collect(Collectors.partitioningBy(p -> p.getAge() < 18));
+        System.out.println("Children number: " + children.get(true).size());
+        System.out.println("Adult number: " + children.get(false).size());
+        assertEquals(100, children.get(true).size() + children.get(false).size());
     }
 
 }
