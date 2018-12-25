@@ -2,7 +2,12 @@ package com.my.project.java;
 
 import static org.junit.Assert.*;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Random;
 import java.util.concurrent.*;
+import java.util.stream.Collectors;
 
 import org.junit.Test;
 
@@ -221,11 +226,118 @@ public class CompletableFutureTest {
     @Test
     public void thenCombine() {
         String original = "Message";
-        CompletableFuture cf = CompletableFuture.completedFuture(original).thenApply(s -> delayedUpperCase(s)).thenCombine(
+        CompletableFuture<String> cf = CompletableFuture.completedFuture(original).thenApply(s -> delayedUpperCase(s)).thenCombine(
             CompletableFuture.completedFuture(original).thenApply(s -> delayedLowerCase(s)),
             (s1, s2) -> s1 + s2
         );
         assertEquals("MESSAGEmessage", cf.getNow(null));
+    }
+
+    /**
+     * 整合计算结果(异步)，由于不确定哪一个方法最终执行完毕，所以需要调用join()方法等待
+     */
+    @Test
+    public void thenCombineAsync() {
+        String original = "Message";
+        CompletableFuture<String> cf = CompletableFuture.completedFuture(original)
+            .thenApplyAsync(s -> delayedUpperCase(s))
+            .thenCombine(
+                CompletableFuture.completedFuture(original).thenApplyAsync(s -> delayedLowerCase(s)),
+                (s1, s2) -> s1 + s2
+            );
+        assertEquals("MESSAGEmessage", cf.join());
+    }
+
+    /**
+     * thenCompose()方法也可以实现两个方法执行后返回结果的连接
+     */
+    @Test
+    public void thenCompose() {
+        String original = "Message";
+        CompletableFuture<String> cf = CompletableFuture.completedFuture(original).thenApply(s -> delayedUpperCase(s))
+            .thenCompose(upper -> CompletableFuture.completedFuture(original).thenApply(s -> delayedLowerCase(s))
+            .thenApply(s -> upper + s));
+        assertEquals("MESSAGEmessage", cf.join());
+    }
+
+    /**
+     * 在几个计算过程中任意一个完成后创建CompletableFuture
+     */
+    @Test
+    public void anyOf() {
+        StringBuilder result = new StringBuilder();
+        List<String> messages = Arrays.asList("a", "b", "c");
+        List<CompletableFuture<String>> futures = messages.stream()
+            .map(msg -> CompletableFuture.completedFuture(msg).thenApply(s -> delayedUpperCase(s)))
+            .collect(Collectors.toList());
+        CompletableFuture.anyOf(futures.toArray(new CompletableFuture<?>[futures.size()]))
+            .whenComplete((res, throwable) -> {
+                if(throwable == null) {
+                    assertTrue(isUpperCase((String)res));
+                    result.append(res);
+                }
+            });
+        assertTrue("Result was empty", result.length() > 0);
+    }
+
+    /**
+     * 在所有计算过程都完成后，创建一个CompletableFuture
+     */
+    @Test
+    public void allOf() {
+        StringBuilder result = new StringBuilder();
+        List<String> messages = Arrays.asList("a", "b", "c");
+        List<CompletableFuture<String>> futures = messages.stream()
+            .map(msg -> CompletableFuture.completedFuture(msg).thenApply(s -> delayedUpperCase(s)))
+            .collect(Collectors.toList());
+        CompletableFuture.allOf(futures.toArray(new CompletableFuture<?>[futures.size()]))
+            .whenComplete((v, throwable) -> {
+                futures.forEach(cf -> assertTrue(isUpperCase(cf.getNow(null))));
+                result.append("done");
+            });
+        assertTrue("Result was empty", result.length() > 0);
+    }
+
+    /**
+     * 异步执行allOfSync
+     */
+    @Test
+    public void allOfAsync() {
+        StringBuilder result = new StringBuilder();
+        List<String> messages = Arrays.asList("a", "b", "c");
+        List<CompletableFuture<String>> futures = messages.stream()
+            .map(msg -> CompletableFuture.completedFuture(msg).thenApplyAsync(s -> delayedUpperCase(s)))
+            .collect(Collectors.toList());
+        CompletableFuture<?> allOf = CompletableFuture.allOf(futures.toArray(new CompletableFuture<?>[futures.size()]))
+            .whenComplete((v, throwable) -> {
+                futures.forEach(cf -> assertTrue(isUpperCase(cf.getNow(null))));
+                result.append("done");
+            });
+        allOf.join();
+        assertTrue("Result was empty", result.length() > 0);
+    }
+
+    /**
+     * CompletableFuture实例
+     */
+    @Test
+    public void sample() {
+        Car.cars().thenCompose(cars -> {
+            List<CompletionStage<Car>> updatedCars = cars.stream()
+                    .map(car -> rating(car.manufacturerId).thenApply(r -> {
+                        car.rating = r;
+                        return car;
+                    })).collect(Collectors.toList());
+            CompletableFuture<Void> done = CompletableFuture.allOf(updatedCars.toArray(new CompletableFuture[updatedCars.size()]));
+            return done.thenApply(v -> updatedCars.stream().map(CompletionStage::toCompletableFuture)
+                    .map(CompletableFuture::join).collect(Collectors.toList()));
+        }).whenComplete((cars, throwable) -> {
+            if(throwable == null) {
+                cars.forEach(System.out::println);
+            } else {
+                throw new RuntimeException(throwable);
+            }
+        }).toCompletableFuture().join();
     }
 
     /**
@@ -257,4 +369,34 @@ public class CompletableFutureTest {
         }
         return s.toLowerCase();
     }
+
+    private boolean isUpperCase(String s) {
+        if(s.equals(s.toUpperCase())) {
+            return true;
+        }
+        return false;
+    }
+
+    public static class Car {
+        String manufacturerId;
+        double rating = 0.0;
+        @Override
+		public String toString() {
+			return "Car [manufacturerId=" + manufacturerId + ", rating=" + rating + "]";
+		}
+		public static CompletableFuture<List<Car>> cars() {
+            List<Car> list = new ArrayList<>();
+            for(int i=0; i<10; i++) {
+                Car c = new Car();
+                c.manufacturerId = "m" + i;
+                list.add(c);
+            }
+            return CompletableFuture.completedFuture(list);
+        }
+    }
+
+    public CompletableFuture<Double> rating(String manufacturerId) {
+        return CompletableFuture.completedFuture(Math.round(new Random().nextDouble() * 100)/100.0);
+    }
+
 }
