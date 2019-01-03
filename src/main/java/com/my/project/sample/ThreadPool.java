@@ -10,8 +10,8 @@ public final class ThreadPool {
 	// 线程池中默认线程的个数为5
 	private static int worker_num = 5;
 	// 工作线程
-	private WorkThread[] workThrads;
-	// 未处理的任务
+	private WorkThread[] workThreads;
+	// 已处理的任务
 	private static volatile int finished_task = 0;
 	// 任务队列，作为一个缓冲,List线程不安全
 	private List<Runnable> taskQueue = new LinkedList<Runnable>();
@@ -25,10 +25,10 @@ public final class ThreadPool {
 	// 创建线程池,worker_num为线程池中工作线程的个数
 	private ThreadPool(int worker_num) {
 		ThreadPool.worker_num = worker_num;
-		workThrads = new WorkThread[worker_num];
+		workThreads = new WorkThread[worker_num];
 		for (int i = 0; i < worker_num; i++) {
-			workThrads[i] = new WorkThread();
-			workThrads[i].start();// 开启线程池中的线程
+			workThreads[i] = new WorkThread();
+			workThreads[i].start();// 开启线程池中的线程
 		}
 	}
 
@@ -47,7 +47,7 @@ public final class ThreadPool {
 		return threadPool;
 	}
 
-	// 执行任务,其实只是把任务加入任务队列，什么时候执行有线程池管理器觉定
+	// 执行任务,其实只是把任务加入任务队列，什么时候执行有线程池管理器决定
 	public void execute(Runnable task) {
 		synchronized (taskQueue) {
 			taskQueue.add(task);
@@ -84,8 +84,8 @@ public final class ThreadPool {
 		}
 		// 工作线程停止工作，且置为null
 		for (int i = 0; i < worker_num; i++) {
-			workThrads[i].stopWorker();
-			workThrads[i] = null;
+			workThreads[i].stopWorker();
+			workThreads[i] = null;
 		}
 		threadPool = null;
 		taskQueue.clear();// 清空任务队列
@@ -96,7 +96,7 @@ public final class ThreadPool {
 		return worker_num;
 	}
 
-	// 返回已完成任务的个数,这里的已完成是只出了任务队列的任务个数，可能该任务并没有实际执行完成
+	// 返回已完成任务的个数,这里的已完成是指出了任务队列的任务个数，可能该任务并没有实际执行完成
 	public int getFinishedTasknumber() {
 		return finished_task;
 	}
