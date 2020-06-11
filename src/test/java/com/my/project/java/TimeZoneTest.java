@@ -130,6 +130,14 @@ public class TimeZoneTest {
 		assertEquals(fromString("2018-06-20 00:20:24"), getZoneTime("US/Eastern", localTime));
 	}
 
+	@Test
+	public void testSpecificTime() throws ParseException {
+		SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS");
+		format.setTimeZone(TimeZone.getTimeZone("America/Los_Angeles"));
+		Date d = format.parse("2020-06-04 00:00:00.000");
+		assertEquals(1591254000000L, d.getTime());
+	}
+
 	/**
 	 * 显示时间
 	 * @param date
